@@ -1,0 +1,8 @@
+attend.sqlite3
+memo
+sounds/*
+share/*
+logs/*
+.DS_Store
+__pycache__
+client_secret.json
