@@ -44,7 +44,7 @@ class MyCardReader(object):
 
 
 def registered(cell):
-    data = main_sheet.row_values(cell.row)
+    user_data = main_sheet.row_values(cell.row)
     subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3','-q'])
     print("【 登録済 】")
 
@@ -55,25 +55,28 @@ def registered(cell):
     record_sheet = now.strftime('%Y-%m')
     first = False
 
-    name = data[1]
-    class_ = f'{data[2]}{data[3]}{data[4]}'
-    stunum = str(data[6])
+    name = user_data[1]
+    class_ = f'{user_data[2]}{user_data[3]}{user_data[4]}'
+    stunum = str(user_data[6])
 
     if not os.path.isfile(logfile):
         first = True
 
     with open(logfile, 'a') as f:
-        print('okok')
         writer = csv.writer(f)
 
         if first:
             worksheet = sht.add_worksheet(title=f'{record_sheet}',rows="100",cols="35")
             writer.writerow(['date', 'time', 'stunum', 'class', 'name'])
 
-        res = record_sheet.find(stunum)
-        if res:
-            # 記録する
-            # record_sheet.update_acell('A1', 'Hello World!')
+        print(user_data)
+        if user_data:
+            write_cell_row = int(now.strftime('%-d')) - 6
+            write_cell_col = conv_num_to_col(re.col)
+            write_cell = f'{write_cell_col}{write_cell_row}'
+
+            print('ここに記録します :', write_cell)
+            # record_sheet.update_acell(cell, 'Hello World!')
         date = now.strftime('%Y-%m-%d')
         time = now.strftime('%H:%M:%S')
 
@@ -82,6 +85,17 @@ def registered(cell):
 
 def unregistered(idm):
     subprocess.Popen(['mpg321', f'{path}sounds/err.mp3'])
+
+
+def conv_num_to_col(num):  
+  if num <= 26:
+    return chr(64 + num)
+  else:
+    if num % 26 == 0:
+      return conv_num_to_col(num//26-1) + 'Z'
+    else:
+      return conv_num_to_col(num//26) + chr(64+num%26)
+
     
 cr = MyCardReader()
 print('⚡️ NFC checker is running!')

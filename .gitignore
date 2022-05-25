@@ -1,8 +1,7 @@
-attend.sqlite3
 memo
 sounds/*
 share/*
-logs/*
+log/*
 .DS_Store
 __pycache__
 client_secret.json
