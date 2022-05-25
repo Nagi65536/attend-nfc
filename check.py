@@ -13,19 +13,20 @@ path = './'
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name(
+    'client_secret.json', scope)
 client = gspread.authorize(creds)
 sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
 target_data = client.open("misc-list")
-main_sheet = target_data.worksheet("情報システム部")
+main_sheet = target_data.worksheet("名簿")
 
 
 class MyCardReader(object):
     def on_connect(self, tag):
         self.idm = binascii.hexlify(tag.identifier).upper().decode('utf-8')
         print("IDm : " + str(self.idm))
-        
+
         cell = main_sheet.find(self.idm)
         if cell:
             registered(cell)
@@ -45,14 +46,15 @@ class MyCardReader(object):
 
 def registered(cell):
     user_data = main_sheet.row_values(cell.row)
-    subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3','-q'])
+    print(user_data)
+    subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3', '-q'])
     print("【 登録済 】")
 
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
     now = datetime.datetime.now(JST)
     logfile = now.strftime(f'{path}log/%Y-%m.csv')
-    record_sheet = now.strftime('%Y-%m')
+    record_sheet_name = now.strftime('%Y-%m')
     first = False
 
     name = user_data[1]
@@ -66,37 +68,52 @@ def registered(cell):
         writer = csv.writer(f)
 
         if first:
-            worksheet = sht.add_worksheet(title=f'{record_sheet}',rows="100",cols="35")
+            worksheet = sht.add_worksheet(
+                title=f'{record_sheet_name}', rows="100", cols="35")
             writer.writerow(['date', 'time', 'stunum', 'class', 'name'])
+        try:
+            sht.duplicate_sheet(source_sheet_id=1120016017,
+                                new_sheet_name=record_sheet_name, insert_sheet_index=1)
+            record_sheet = target_data.worksheet(record_sheet_name)
+            users_data = main_sheet.get_all_values()
 
-        print(user_data)
-        if user_data:
-            write_cell_row = int(now.strftime('%-d')) - 6
-            write_cell_col = conv_num_to_col(re.col)
-            write_cell = f'{write_cell_col}{write_cell_row}'
+            i = 1
+            datas = []
+            for data in users_data[1:]:
+                i += 1
+                cl = f'{data[2]}{data[3]}{data[4]}'
+                cl_sort = f'{data[3]}{data[2]}{data[4]}'
+                record_sheet.append_row([data[6], cl, data[1], cl_sort],table_range=f'B{i}')
+        except:
+            pass
 
-            print('ここに記録します :', write_cell)
-            # record_sheet.update_acell(cell, 'Hello World!')
-        date = now.strftime('%Y-%m-%d')
-        time = now.strftime('%H:%M:%S')
+        # TODO: 来た日にチェック入れる処理
+        # if user_data:
+        #     write_cell_row = int(now.strftime('%-d')) - 6
+        #     write_cell_col = int(res.col)
 
-        writer.writerow([date, time, stunum, class_, name])
+        #     record_sheet.update_acell(
+        #         write_cell_col, write_cell_row, 'Hello World!')
+        # date = now.strftime('%Y-%m-%d')
+        # time = now.strftime('%H:%M:%S')
+
+        # writer.writerow([date, time, stunum, class_, name])
 
 
 def unregistered(idm):
-    subprocess.Popen(['mpg321', f'{path}sounds/err.mp3'])
+    subprocess.Popen(['mpg321', f'{path}sounds/err.mp3', '-q'])
 
 
-def conv_num_to_col(num):  
-  if num <= 26:
-    return chr(64 + num)
-  else:
-    if num % 26 == 0:
-      return conv_num_to_col(num//26-1) + 'Z'
+def conv_num_to_col(num):
+    if num <= 26:
+        return chr(64 + num)
     else:
-      return conv_num_to_col(num//26) + chr(64+num%26)
+        if num % 26 == 0:
+            return conv_num_to_col(num//26-1) + 'Z'
+        else:
+            return conv_num_to_col(num//26) + chr(64+num % 26)
 
-    
+
 cr = MyCardReader()
 print('⚡️ NFC checker is running!')
 while True:
