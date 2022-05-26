@@ -32,7 +32,7 @@ class MyCardReader(object):
             registered(cell)
         else:
             unregistered(self.idm)
-
+        print('\n---fin---\n')
         return True
 
     def read_id(self):
@@ -45,9 +45,9 @@ class MyCardReader(object):
 
 
 def registered(cell):
+    subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3', '-q'])
     user_data = main_sheet.row_values(cell.row)
     print(user_data)
-    subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3', '-q'])
     print("【 登録済 】")
 
     t_delta = datetime.timedelta(hours=9)
@@ -88,18 +88,23 @@ def registered(cell):
         except:
             record_sheet = target_data.worksheet(record_sheet_name)
 
-        # TODO: 来た日にチェック入れる処理
         get_record_cell = record_sheet.find(stunum)
         record_cell_col = get_record_cell.row
         record_cell_row = int(now.strftime('%-d')) + 8
-        # record_cell = f'{record_cell_row}{record_cell_col}'
 
         record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
 
 
 def unregistered(idm):
     subprocess.Popen(['mpg321', f'{path}sounds/err.mp3', '-q'])
-    # TODO: 未登録IDを登録する
+    get_rfid = main_sheet.col_values(8)
+
+    i = 2
+    for value in get_rfid[1:]:
+        if value and len(value) < 5:
+            print('発見', value)
+            main_sheet.update_cell(i, 8, idm)
+        i += 1
 
 
 def conv_num_to_col(num):
