@@ -83,25 +83,23 @@ def registered(cell):
                 i += 1
                 cl = f'{data[2]}{data[3]}{data[4]}'
                 cl_sort = f'{data[3]}{data[2]}{data[4]}'
-                record_sheet.append_row([data[6], cl, data[1], cl_sort],table_range=f'B{i}')
+                record_sheet.append_row(
+                    [data[6], cl, data[5], data[1]], table_range=f'B{i}')
         except:
-            pass
+            record_sheet = target_data.worksheet(record_sheet_name)
 
         # TODO: 来た日にチェック入れる処理
-        # if user_data:
-        #     write_cell_row = int(now.strftime('%-d')) - 6
-        #     write_cell_col = int(res.col)
+        get_record_cell = record_sheet.find(stunum)
+        record_cell_col = get_record_cell.row
+        record_cell_row = int(now.strftime('%-d')) + 8
+        # record_cell = f'{record_cell_row}{record_cell_col}'
 
-        #     record_sheet.update_acell(
-        #         write_cell_col, write_cell_row, 'Hello World!')
-        # date = now.strftime('%Y-%m-%d')
-        # time = now.strftime('%H:%M:%S')
-
-        # writer.writerow([date, time, stunum, class_, name])
+        record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
 
 
 def unregistered(idm):
     subprocess.Popen(['mpg321', f'{path}sounds/err.mp3', '-q'])
+    # TODO: 未登録IDを登録する
 
 
 def conv_num_to_col(num):
