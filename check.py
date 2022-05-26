@@ -64,35 +64,52 @@ def registered(cell):
     if not os.path.isfile(logfile):
         first = True
 
-    with open(logfile, 'a') as f:
-        writer = csv.writer(f)
 
-        if first:
-            worksheet = sht.add_worksheet(
-                title=f'{record_sheet_name}', rows="100", cols="35")
-            writer.writerow(['date', 'time', 'stunum', 'class', 'name'])
-        try:
-            sht.duplicate_sheet(source_sheet_id=1120016017,
-                                new_sheet_name=record_sheet_name, insert_sheet_index=1)
-            record_sheet = target_data.worksheet(record_sheet_name)
-            users_data = main_sheet.get_all_values()
+    if first:
+        worksheet = sht.add_worksheet(
+            title=f'{record_sheet_name}', rows="100", cols="35")
+    try:
+        sht.duplicate_sheet(source_sheet_id=1120016017,
+                            new_sheet_name=record_sheet_name, insert_sheet_index=1)
+        record_sheet = target_data.worksheet(record_sheet_name)
+        users_data = main_sheet.get_all_values()
 
-            i = 1
-            datas = []
-            for data in users_data[1:]:
-                i += 1
-                cl = f'{data[2]}{data[3]}{data[4]}'
-                cl_sort = f'{data[3]}{data[2]}{data[4]}'
-                record_sheet.append_row(
-                    [data[6], cl, data[5], data[1]], table_range=f'B{i}')
-        except:
-            record_sheet = target_data.worksheet(record_sheet_name)
+        i = 1
+        datas = []
+        for data in users_data[1:]:
+            i += 1
+            cl = f'{data[2]}{data[3]}{data[4]}'
+            cl_sort = f'{data[3]}{data[2]}{data[4]}'
+            record_sheet.append_row(
+                [data[1], data[2], data[3], data[4], data[5], data[6]], table_range=f'B{i}')
+            time.sleep(1)
+            print(i)
+    except:
+        user_data = None
+        record_sheet = target_data.worksheet(record_sheet_name)
 
-        get_record_cell = record_sheet.find(stunum)
+    get_record_cell = record_sheet.find(stunum)
+    if get_record_cell:
         record_cell_col = get_record_cell.row
-        record_cell_row = int(now.strftime('%-d')) + 8
+    else:
+        if not user_data:
+            users_data = main_sheet.get_all_values()
+        record_data = record_sheet.col_values(7)
 
-        record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
+        # 月の出席テーブルを更新
+        i = 1
+        for data in users_data[1:]:
+            if not data[6] in record_data:
+                print(data)
+                print(record_data)
+                input_row = len(record_data) + i
+                record_sheet.append_row(
+                    [data[1], data[2], data[3], data[4], data[5], data[6]], table_range=f'B{input_row}')
+                i += 1
+
+    record_cell_row = int(now.strftime('%-d')) + 8
+    record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
+    print('fin')
 
 
 def unregistered(idm):
