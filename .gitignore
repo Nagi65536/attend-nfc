@@ -5,3 +5,4 @@ log/*
 .DS_Store
 __pycache__
 client_secret.json
+check.db
