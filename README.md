@@ -1,2 +1,3 @@
-# attend-systemQR
-出席管理システムのQRコードバージョンです
+# attend-nfc
+出席管理システムのnfcタグバージョンです
+Googleスプレッドシートで管理できます
