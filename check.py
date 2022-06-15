@@ -10,12 +10,12 @@ import time
 from oauth2client.service_account import ServiceAccountCredentials
 
 
-path = './'
+path = '/home/nagi/Documents/attend-nfc-ver2/'
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name(
-    'client_secret.json', scope)
+    f'{path}client_secret.json', scope)
 client = gspread.authorize(creds)
 sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
@@ -25,7 +25,7 @@ main_sheet = target_data.worksheet("名簿")
 conn = sqlite3.connect(f'{path}check.db')
 cur = conn.cursor()
 
-cur.execute('CREATE TABLE IF NOT EXISTS recorded(stunum TEXT PRIMARY KEY, name TEXT, class TEXT, idm TEXT)')
+cur.execute('CREATE TABLE IF NOT EXISTS recorded(stunum TEXT PRIMARY KEY, name TEXT, class TEXT, idm TEXT, time INTEGER)')
 cur.execute('CREATE TABLE IF NOT EXISTS unrecorded(stunum TEXT PRIMARY KEY, name TEXT, class TEXT, idm TEXT, row INTEGER, record_sheet TEXT)')
 
 
@@ -35,15 +35,29 @@ class MyCardReader(object):
         print("IDm : " + str(self.idm))
 
         cur.execute(f'SELECT * FROM recorded WHERE idm="{self.idm}"')
-        is_recorded = cur.fetchall()
+        is_recorded = cur.fetchone()
+        print('1-', is_recorded)
+
+        if not is_recorded:
+            print('in!')
+            cur.execute(f'SELECT * FROM unrecorded WHERE idm="{self.idm}"')
+            is_recorded = cur.fetchone()
+
+        print('this', is_recorded)
         
         if is_recorded:
-            subprocess.Popen(['mpg321', f'{path}sounds/piyopiyo.mp3', '-q'])
+            diff_time = time.time() - int(is_recorded[4])
+            print(diff_time)
+            
+            if diff_time < 60*30 or is_recorded[4] == 0:
+                subprocess.Popen(['mpg321', f'{path}sounds/deliriteli.mp3', '-q'])
+            else:
+                leave_the_room(is_recorded[0])
             print('【記録済】')
         else:
             cell = main_sheet.find(self.idm)
             if cell:
-                registered(cell)
+                enter_the_room(cell)
             else:
                 unregistered(self.idm)
         
@@ -59,10 +73,10 @@ class MyCardReader(object):
             clf.close()
 
 
-def registered(cell):
+def enter_the_room(cell):
+    print('nyuusitu')
     subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3', '-q'])
     user_data = main_sheet.row_values(cell.row)
-    print(user_data)
     print("【 登録済 】")
 
     t_delta = datetime.timedelta(hours=9)
@@ -113,32 +127,57 @@ def registered(cell):
     # 記録用シートに登録されているか
     if get_record_cell:
         record_cell_col = get_record_cell.row
-
-        record_cell_row = int(now.strftime('%-d')) + 8
-        record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
+        
+        time_now = int(time.time())
+        record_cell_row = int(now.strftime('%-d')) + 10
+        record_sheet.update_cell(record_cell_col, record_cell_row, "△")
         cur.execute(
-            f'REPLACE INTO recorded(stunum, name, class, idm) VALUES("{stunum}", "{name}", "{class_}", "{user_data[7]}")')
+            f'REPLACE INTO recorded(stunum, name, class, idm, time) VALUES("{stunum}", "{name}", "{class_}", "{user_data[7]}", "{time_now}")')
         conn.commit()
         print('記録完了')
     else:
-        record_cell_row = int(now.strftime('%-d')) + 8
+        record_cell_row = int(now.strftime('%-d')) + 10
         cur.execute(
             f'REPLACE INTO unrecorded(stunum, name, class, idm, row, record_sheet) VALUES("{stunum}", "{name}", "{class_}", "{user_data[7]}", "{record_cell_row}", "{record_sheet_name}")')
         conn.commit()
         print('記録できませんでした')
 
 
+def leave_the_room(stunum):
+    print('taisitu')
+    subprocess.Popen(['mpg321', f'{path}sounds/teretere.mp3', '-q'])
+    t_delta = datetime.timedelta(hours=9)
+    JST = datetime.timezone(t_delta, 'JST')
+    now = datetime.datetime.now(JST)
+    record_sheet_name = now.strftime('%Y-%m')
+    record_sheet = target_data.worksheet(record_sheet_name)
+    get_record_cell = record_sheet.find(stunum)
+    record_cell_col = get_record_cell.row
+
+    record_cell_row = int(now.strftime('%-d')) + 10
+    record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
+    cur.execute(
+        f'UPDATE recorded SET time=0 WHERE stunum="{stunum}"')
+    conn.commit()
+    print('更新完了')
+
+
 def unregistered(idm):
     print('【未登録】')
     get_rfid = main_sheet.col_values(8)
 
+    is_detection = False
     i = 2
     for value in get_rfid[1:]:
         if value and len(value) < 15:
-            subprocess.Popen(['mpg321', f'{path}sounds/popi.mp3', '-q'])
-            print('【新規登録】\n', value)
-            main_sheet.update_cell(i, 8, idm)
-            is_detection = True
+            try:
+                subprocess.Popen(['mpg321', f'{path}sounds/popi.mp3', '-q'])
+                print('【新規登録】\n', value)
+                main_sheet.update_cell(i, 8, idm)
+                is_detection = True
+            except:
+                pass
+            
             break
         else:
             is_detection = False
