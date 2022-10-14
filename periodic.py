@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import sqlite3
 import subprocess
 import time
@@ -42,20 +43,23 @@ def main():
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
 
+    all_data = setting_sheet.get_all_values()
+    isOn = all_data[4][col].lower() == 'on'
+    set_time = all_data[3][col]
+
     while True:
         dt_now = datetime.datetime.now(JST)
         now_time = dt_now.strftime('%H:%M')
+        now_min = int(dt_now.strftime('%M'))
         record_sheet_name = dt_now.strftime('%Y-%m')
         col = datetime.date.today().weekday() + 3
 
-        all_data = setting_sheet.get_all_values()
-        isOn = all_data[4][week_num].lower() == 'on'
-        set_time = all_data[3][week_num]
+        if now_min % 10 == 0:
+            all_data = setting_sheet.get_all_values()
+            isOn = all_data[4][col].lower() == 'on'
+            set_time = all_data[3][col]
 
-        if not isOn:
-            break
-
-        if now_time == set_time:
+        if isOn and now_time == set_time:
             subprocess.Popen(['mpg321', f'{path}sounds/fin.mp3', '-q'])
             time.sleep(210)
 
