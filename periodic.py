@@ -1,8 +1,9 @@
 import datetime
-import time
-import subprocess
-import sqlite3
 import os
+import sqlite3
+import subprocess
+import time
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -16,150 +17,70 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(
 client = gspread.authorize(creds)
 sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
-target_data = client.open("misc-list")
-main_sheet = target_data.worksheet("名簿")
 
-conn = sqlite3.connect(f'{path}check.db')
-cur = conn.cursor()
-
-cur.execute('CREATE TABLE IF NOT EXISTS recorded(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, class TEXT, stunum TEXT)')
-cur.execute('CREATE TABLE IF NOT EXISTS unrecorded(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, class TEXT, stunum TEXT, row INTEGER, record_sheet TEXT)')
-
-
-print('⚡️ Periodic is running!')
-settime = None
-nowtime = None
-t_delta = datetime.timedelta(hours=9)
-JST = datetime.timezone(t_delta, 'JST')
-
-
-def registered(stunum, name, class_, idm, record_cell_row, record_sheet_name):
-    first = True
-
+def init():
     try:
-        record_sheet = sht.duplicate_sheet(
-            source_sheet_id=1120016017, new_sheet_name=record_sheet_name, insert_sheet_index=1)
-        users_data = main_sheet.get_all_values()
-        i = 1
-        for data in users_data[1:]:
-            i += 1
-            cl = f'{data[2]}{data[3]}{data[4]}'
-            cl_sort = f'{data[3]}{data[2]}{data[4]}'
-            record_sheet.append_row(
-                [data[1], data[2], data[3], data[4], data[5], data[6]], table_range=f'B{i}')
-    except:
-        users_data = None
+        cur.execute('DELETE FROM record')
+        sht.duplicate_sheet(
+            source_sheet_id=1120016017,
+            new_sheet_name=record_sheet_name,
+            insert_sheet_index=1
+        )
         record_sheet = target_data.worksheet(record_sheet_name)
+        all_data = main_sheet.get_all_values()
 
-    get_record_cell = record_sheet.find(stunum)
-    if not get_record_cell:
-        if not users_data:
-            users_data = main_sheet.get_all_values()
-        record_data = record_sheet.col_values(7)
-
-        i = 1
-        try:
-            for data in users_data[1:]:
-                if not data[6] in record_data:
-                    input_row = len(record_data) + i
-                    record_sheet.append_row(
-                        [data[1], data[2], data[3], data[4], data[5], data[6]], table_range=f'B{input_row}')
-                    i += 1
-        except:
-            pass
-        
-    get_record_cell = record_sheet.find(stunum)
-    # 記録用シートに登録されているか
-    if get_record_cell:
-        record_cell_col = get_record_cell.row
-
-        record_cell_row = int(now.strftime('%-d')) + 8
-        record_sheet.update_cell(record_cell_col, record_cell_row, "◯")
-        cur.execute(
-            f'REPLACE INTO recorded(stunum, name, class, idm) VALUES("{stunum}", "{name}", "{class_}", "{idm}")')
-        conn.commit()
-        print('記録完了')
-    else:
-        record_cell_row = int(now.strftime('%-d')) + 8
-        cur.execute(
-            f'REPLACE INTO unrecorded(stunum, name, class, idm, row, record_sheet) VALUES("{stunum}", "{name}", "{class_}", "{idm}", "{record_cell_row}", "{record_sheet_name}")')
-        conn.commit()
-        print('記録できませんでした')
-    print('\n---fin---\n')
+        for i, data in enumerate(all_data[1:]):
+            record_sheet.append_row(
+                [data[1], data[2], data[3], data[4], data[5], data[6]],
+                table_range=f'B{i+1}'
+            )
+    except:
+        pass
 
 
-def record():
-    cur.execute('SELECT * FROM unrecorded')
-    datas = cur.fetchall()
-    cur.execute('DELETE FROM unrecorded')
-    conn.commit()
+def main():
+    t_delta = datetime.timedelta(hours=9)
+    JST = datetime.timezone(t_delta, 'JST')
 
-    for data in datas:
-        print(data)
-        registered(data[0], data[1], data[2], data[3], data[4], data[5])
+    while True:
+        dt_now = datetime.datetime.now(JST)
+        now_time = dt_now.strftime('%H:%M')
+        record_sheet_name = dt_now.strftime('%Y-%m')
+        col = datetime.date.today().weekday() + 3
+
+        all_data = setting_sheet.get_all_values()
+        isOn = all_data[4][week_num].lower() == 'on'
+        set_time = all_data[3][week_num]
+
+        if not isOn:
+            break
+
+        if now_time == set_time:
+            subprocess.Popen(['mpg321', f'{path}sounds/fin.mp3', '-q'])
+            time.sleep(210)
+
+        if now_time == "00:00":
+            init()
+
+        time.sleep(50)
 
 
-while True:
-    if not os.path.isfile(f'{path}share/endtime.txt'):
-        with open(f'{path}share/endtime.txt', 'w') as f2:
-            f2.write(f'----\n18:00')
+if __name__ == '__main__':
+    target_data = client.open("misc-list")
+    main_sheet = target_data.worksheet("名簿")
+    setting_sheet = target_data.worksheet("設定")
 
-    now = datetime.datetime.now(JST)
-    nowtime = now.strftime('%H:%M')
-    nowmin = now.strftime('%M')
+    conn = sqlite3.connect(f'{path}check.db', isolation_level=None)
+    cur = conn.cursor()
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS record(
+            idm            TEXT PRIMARY KEY,
+            entry_time     TEXT DEFAULT 0,
+            entry_time_int INTEGER DEFAULT 0,
+            exit_time      TEXT DEFAULT 0
+            exit_time_int  INTEGER DEFAULT 0
+        )''')
 
-    with open(f'{path}share/endtime.txt', 'r') as f:
-        times = f.read().split('\n')
-
-        if times[0] != '----':
-            with open(f'{path}share/endtime.txt', 'w') as f2:
-                f2.write(f'----\n{times[1]}')
-            settime = times[0]
-        elif settime == None or len(times) > 2:
-            settime = times[1]
-            with open(f'{path}share/endtime.txt', 'w') as f2:
-                f2.write(f'----\n{times[1]}')
-
-    if nowtime == settime:
-        print('【Playback "蛍の光"】')
-        devnull = open('/dev/null', 'w')
-        subprocess.Popen(['mpg321', f'{path}sounds/fin.mp3'],
-                         stdout=devnull, stderr=devnull)
-
-        time.sleep(220)
-
-    if nowtime == '00:00':
-        print('【リセット】')
-        cur.execute('DELETE * FROM unrecorded')
-        cur.execute('DELETE FROM recorded')
-        conn.commit()
-        settime = None
-        today = now.strftime('%d')
-        try:
-            logfile = now.strftime(f'{path}log/%Y-%m.csv')
-            record_sheet_name = now.strftime('%Y-%m')
-            first = False
-
-            sht.duplicate_sheet(source_sheet_id=1120016017,
-                                new_sheet_name=record_sheet_name, insert_sheet_index=1)
-            record_sheet = target_data.worksheet(record_sheet_name)
-            users_data = main_sheet.get_all_values()
-
-            i = 1
-            datas = []
-            for data in users_data[1:]:
-                i += 1
-                cl = f'{data[2]}{data[3]}{data[4]}'
-                cl_sort = f'{data[3]}{data[2]}{data[4]}'
-                record_sheet.append_row(
-                    [data[1], data[2], data[3], data[4], data[5], data[6]], table_range=f'B{i}')
-                time.sleep(1)
-                print(i)
-        except:
-            pass
-    print(nowmin)
-    if nowmin == '00':
-        print('【データ再登録】')
-        record()
-
-    time.sleep(20)
+    record_sheet_name = None
+    print('⚡️ Periodic is running!')
+    main()

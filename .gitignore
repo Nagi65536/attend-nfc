@@ -1,7 +1,4 @@
-memo
 sounds/*
-share/*
-log/*
 .DS_Store
 __pycache__
 client_secret.json
