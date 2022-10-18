@@ -1,7 +1,6 @@
 import binascii
 import csv
 import datetime
-import math
 import os
 import sqlite3
 import subprocess
@@ -11,13 +10,14 @@ import gspread
 import nfc
 from oauth2client.service_account import ServiceAccountCredentials
 
-# path = '/home/nagi/Documents/attend-nfc-ver2/'
-path = './'
+SPREADSHEET_APP = 'misc-list'
+ROSTER_NAME = '名簿'
+PATH = __file__
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name(
-    f'{path}client_secret.json', scope)
+    f'{PATH}client_secret.json', scope)
 client = gspread.authorize(creds)
 sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
@@ -26,7 +26,7 @@ class MyCardReader(object):
     # カードがタッチされたら呼び出される
     def on_connect(self, tag):
         self.idm = binascii.hexlify(tag.identifier).upper().decode('utf-8')
-        print("IDm : " + str(self.idm))
+        print(f'IDm : {self.idm}')
         record(self.idm)
         return
 
@@ -41,7 +41,6 @@ class MyCardReader(object):
 
 # 入退室記録の登録
 def record(idm):
-    input('aaa')
     global record_sheet
     global current_sheet_date
     global get_all_data
@@ -72,7 +71,7 @@ def record(idm):
         for i, value in enumerate(idm_list[1:]):
             if len(value) > 0 and len(value) < 11:
                 print(f'【新規登録】{i+1}, {value}')
-                subprocess.Popen(['mpg321', f'{path}sounds/popi.mp3', '-q'])
+                subprocess.Popen(['mpg321', f'{PATH}sounds/popi.mp3', '-q'])
                 main_sheet.update_cell(i+2, 8, idm)
                 return
 
@@ -92,15 +91,15 @@ def record(idm):
 
         # データベースにデータがあるか
         if res and not res[0] == 0:
-            subprocess.Popen(['mpg321', f'{path}sounds/teretere.mp3', '-q'])
+            subprocess.Popen(['mpg321', f'{PATH}sounds/teretere.mp3', '-q'])
             diff_time = time_int - res[0]
-            tmp = math.floor(diff_time/60)
+            tmp = diff_time // 60
             record_txt = tmp if tmp < 60*30 else '◯'
             cur.execute(
                 f'UPDATE record SET exit_time="{time_str}", exit_time_int="{time_int}", current_data="{record_txt}" WHERE idm="{idm}"')
 
         else:
-            subprocess.Popen(['mpg321', f'{path}sounds/ppi.mp3', '-q'])
+            subprocess.Popen(['mpg321', f'{PATH}sounds/ppi.mp3', '-q'])
             record_txt = '0'
 
             if not res:
@@ -136,7 +135,7 @@ def record(idm):
         print(f'【記録】 "{record_txt}" {record_col}列目 {record_row - 10}日')
 
     except err:
-        subprocess.Popen(['mpg321', f'{path}sounds/err.mp3', '-q'])
+        subprocess.Popen(['mpg321', f'{PATH}sounds/err.mp3', '-q'])
         print(f'【ERROR】{err}')
 
     else:
@@ -146,12 +145,12 @@ def record(idm):
 
 
 if __name__ == '__main__':
-    target_data = client.open("misc-list")
-    main_sheet = target_data.worksheet("名簿")
+    target_data = client.open(SPREADSHEET_APP)
+    main_sheet = target_data.worksheet(ROSTER_NAME)
     record_sheet = None
     current_sheet_date = None
 
-    conn = sqlite3.connect(f'{path}check.db', isolation_level=None)
+    conn = sqlite3.connect(f'{PATH}check.db', isolation_level=None)
     cur = conn.cursor()
     cur.execute('''
         CREATE TABLE IF NOT EXISTS record(
@@ -169,5 +168,4 @@ if __name__ == '__main__':
 
     print('⚡️ Attend System is running!')
     while True:
-        # cr.read_id()
-        record('01010910DF16BF0E')
+        cr.read_id()
