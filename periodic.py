@@ -8,8 +8,10 @@ import time
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# TODO
+MUSIC_FILE = 'hotarus_light.mp4'
 SPREADSHEET_APP = 'misc-list'
-ROSTER_NAME = '名簿'
+SETTING_SHEET = '設定'
 PATH = __file__
 
 scope = ['https://spreadsheets.google.com/feeds',
@@ -22,7 +24,7 @@ sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
 def main():
     target_data = client.open(SPREADSHEET_APP)
-    setting_sheet = target_data.worksheet("設定")
+    setting_sheet = target_data.worksheet(SETTING_SHEET)
 
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
@@ -47,7 +49,7 @@ def main():
 
         if isOn and now_time == set_time:
             print(' 【再生開始】蛍の光')
-            subprocess.Popen(['mpg321', f'{PATH}sounds/fin.mp3', '-q'])
+            subprocess.Popen(['mpg321', f'{PATH}sounds/{MUSIC_FILE}', '-q'])
             time.sleep(210)
 
         time.sleep(50)
