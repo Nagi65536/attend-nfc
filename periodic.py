@@ -1,6 +1,5 @@
 import datetime
 import os
-import re
 import sqlite3
 import subprocess
 import time
@@ -12,7 +11,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 MUSIC_FILE = 'hotarus_light.mp4'
 SPREADSHEET_APP = 'misc-list'
 SETTING_SHEET = '設定'
-PATH = __file__
+PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
