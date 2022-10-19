@@ -1,6 +1,5 @@
 import datetime
 import os
-import re
 import sqlite3
 import subprocess
 import time
@@ -9,15 +8,15 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # TODO
-MUSIC_FILE = 'hotarus_light.mp4'
+MUSIC_FILE = 'hotarus_light.mp3'
 SPREADSHEET_APP = 'misc-list'
 SETTING_SHEET = '設定'
-PATH = __file__
+PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name(
-    'client_secret.json', scope)
+    f'{PATH}client_secret.json', scope)
 client = gspread.authorize(creds)
 sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
@@ -47,12 +46,13 @@ def main():
             set_time = get_data[3]
             isOn = get_data[4].lower() == 'on'
 
+        print(f'now:{now_time} set:{set_time} isOn:{isOn}')
         if isOn and now_time == set_time:
             print(' 【再生開始】蛍の光')
             subprocess.Popen(['mpg321', f'{PATH}sounds/{MUSIC_FILE}', '-q'])
             time.sleep(210)
 
-        time.sleep(50)
+        time.sleep(30)
 
 
 if __name__ == '__main__':

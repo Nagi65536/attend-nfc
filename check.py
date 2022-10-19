@@ -1,5 +1,4 @@
 import binascii
-import csv
 import datetime
 import os
 import sqlite3
@@ -11,16 +10,16 @@ import nfc
 from oauth2client.service_account import ServiceAccountCredentials
 
 # TODO
-SE_ENTRY = 'crrect_answer1.mp3'
-SE_EXIT  = 'maou_system46.mp3'
+SE_ENTRY = 'maou_system23.mp3'
+SE_EXIT = 'maou_system46.mp3'
 SE_ERROR = 'pickup02.mp3'
-SE_NEW   = 'succeed.mp3'
-SE_NONE  = 'maou_system35.mp3'
+SE_NEW = 'succeed.mp3'
+SE_NONE = 'maou_system35.mp3'
 
 # TODO
 SPREADSHEET_APP = 'misc-list'
 ROSTER_NAME = '名簿'
-PATH = __file__
+PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
@@ -36,7 +35,7 @@ class MyCardReader(object):
         self.idm = binascii.hexlify(tag.identifier).upper().decode('utf-8')
         print(f'IDm : {self.idm}')
         record(self.idm)
-        return
+        return True
 
     # カードの検知
     def read_id(self):
@@ -85,6 +84,7 @@ def record(idm):
 
         print('【未登録】')
         subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_NONE}', '-q'])
+        return
 
     try:
         record_txt = ''
@@ -98,17 +98,18 @@ def record(idm):
             f'SELECT entry_time_int, last_entry_date, current_data FROM record WHERE idm="{idm}"')
         res = cur.fetchone()
 
-        # 入室記録がない場合
+        # 入室記録がある場合
         if res and not res[0] == 0:
-            subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_ENTRY}', '-q'])
+            print('入室', res)
+            subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_EXIT}', '-q'])
             diff_time = time_int - res[0]
             tmp = diff_time // 60
-            record_txt = tmp if tmp < 60*30 else '◯'
+            record_txt = tmp if tmp < 60*60 else '◯'
             cur.execute(
                 f'UPDATE record SET exit_time="{time_str}", exit_time_int="{time_int}", current_data="{record_txt}" WHERE idm="{idm}"')
 
         else:
-            subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_EXIT}', '-q'])
+            subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_ENTRY}', '-q'])
             record_txt = '0'
 
             if not res:
@@ -143,9 +144,9 @@ def record(idm):
         record_sheet.update_cell(record_col, record_row, record_txt)
         print(f'【記録】 "{record_txt}" {record_col}列目 {record_row - 10}日')
 
-    except err:
+    except:
         subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_ERROR}', '-q'])
-        print(f'【ERROR】{err}')
+        print(f'【ERROR】')
 
     else:
         # データを更新
