@@ -31,7 +31,7 @@ def main():
     isFirst = True
     isOn = True
     get_data = None
-    set_time = None
+    set_times = None
 
     print('⚡️ Periodic is running!')
     while True:
@@ -43,12 +43,11 @@ def main():
 
         if now_min % 10 == 0 or isFirst:
             get_data = setting_sheet.col_values(col)
-            set_time = get_data[3]
-            isOn = get_data[4].lower() == 'on'
+            set_times = [get_data[3], get_data[4]]
 
-        print(f'now:{now_time} set:{set_time} isOn:{isOn}')
-        if isOn and now_time == set_time:
-            print(' 【再生開始】蛍の光')
+        print(f'now: {now_time}  set-1: {set_times[0]}  set-2: {set_times[1]}')
+        if now_time in set_times:
+            print('【再生開始】蛍の光')
             subprocess.Popen(['mpg321', f'{PATH}sounds/{MUSIC_FILE}', '-q'])
             time.sleep(210)
 
