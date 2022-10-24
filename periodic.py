@@ -39,7 +39,7 @@ def main():
         now_time = dt_now.strftime('%H:%M')
         now_min = int(dt_now.strftime('%M'))
         record_sheet_name = dt_now.strftime('%Y-%m')
-        col = datetime.date.today().weekday() + 3
+        col = dt_now.today().weekday() + 3
 
         if now_min % 10 == 0 or isFirst:
             get_data = setting_sheet.col_values(col)
