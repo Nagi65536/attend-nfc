@@ -104,7 +104,7 @@ def record(idm):
             subprocess.Popen(['mpg321', f'{PATH}sounds/{SE_EXIT}', '-q'])
             diff_time = time_int - res[0]
             tmp = diff_time // 60
-            record_txt = tmp if tmp < 60*60 else '◯'
+            record_txt = tmp if tmp < 60 else '◯'
             cur.execute(
                 f'UPDATE record SET exit_time="{time_str}", exit_time_int="{time_int}", current_data="{record_txt}" WHERE idm="{idm}"')
 
