@@ -11,68 +11,43 @@ Googleスプレッドシートで管理できます。
 - Google スプレッドシート
 - Apps Script
 - Google Drive API
-- Python 3.8~
+- Python 3.10
 
 ## セットアップ - スプレッドシート
 1. [このサイト](https://www.twilio.com/blog/an-easy-way-to-read-and-write-to-a-google-spreadsheet-in-python-jp)に従って鍵を生成し、ファイル名を `client_secret.json` にする
-2.  `名簿` `テンプレート` シートを追加する
-3. `gas.js`　を Apps Script にコピーし、トリガーを設定する
+2.  `名簿` `設定` シートを追加する
+3. [gas.js](./gas.js)　を `Apps Script` にコピーし、トリガーを設定する
 
 ### シートの設定
 #### 名簿
-| A          | B        | C   | D   | E     | F    | G      | H                 | I             |
-|------------|----------|-----|-----|-------|------|--------|-------------------|---------------|
-| [連番用関数] | 氏名     | 学科 | 学年 | クラス | 番号 | 学籍番号 | RFID              | ［ソート用関数] |
-| (1)        | 佐藤 智   | J   | 2   | Z     |  46  | 65536  | ABCDEF1234567890  | (3JZ46)       |
-| (2)        | 多田 隆人 | J   | 3   | A     |  31  | 201018 | PENGUINISCUTE987  | (3JA31)       |
-| 以下同様    |          |     |     |       |      |        |                   |               |
-
-#### テンプレート
-| A          | B      | C   | D   | E     | F    | G      | H          | | J          | K  | L | M | ...  | AO  | AP          |
-|------------|--------|-----|-----|-------|------|--------|------------|-|------------|----|---|---|------|-----|-------------|
-| [連番用関数] | 氏名   | 学科 | 学年 | クラス | 番号 | 学籍番号 | ソート用関数 | | 合計        | 1  | 2 | 3 | ...  | 31  | 合計        |
-| (1)        |        |     |     |       |      |        |            | | [合計用関数] |    |   |   |      |     | [合計用関数] | 
-| (2)        |        |     |     |       |      |        |            | | [合計用関数] |    |   |   |      |     | [合計用関数] |
-| 以下同様    |        |     |     |       |      |        |            | | [合計用関数] |    |   |   |      |     | [合計用関数] |
+| A          | B        | C   | D   | E     | F    | G      | H                 |   | 4月 | 5月 | ... | 3月 | 計
+|------------|----------|-----|-----|-------|------|--------|-------------------|---|-----|----|-----|-----|---|
+| [連番用関数] | 氏名     | 学科 | 学年 | クラス | 番号  | 学籍番号 | RFID             |   |      |    |     |    |   |
+|            | 佐藤 智   | J   | 2   | Z     |  46  | 65536  | ABCDEF1234567890  |   |     |    |      |    |   |
+|            | 多田 隆人 | J   | 3   | A     |  31  | 201018  | PENGUINISCUTE987 |   |      |    |     |     |   |
+| 以下同様    |          |     |     |       |      |         |                  |   |      |    |      |    |   |
 
 #### 設定
-| A | B    | C     | D     | E     | F     | G     | H     | I      |
-|---|------|-------|-------|-------|-------|-------|-------|--------|
-|   |      |        |      |       |       |       |       |        |
-|   |      | 月     | 火    | 水    | 木     | 金    | 土    | 日     |
-|   | 1回目 | 16:50 | 16:50 | 16:50 | 16:50 | 16:50 | ---   | ---   |
-|   | 2回目 | 17:50 | ---   | 17:50 | ---   | ---   | ---   | ---   |
+| A | B    | C        | D |
+|---|------|----------|---|
+|   |      |          |   |
+|   |      | 終了の音楽 |   |
+|   | 1回目 | 16:50    |   |
+|   | 2回目 | 17:50    |   |
+|   |      |          |   |
    
 
 #### 連番用関数
-- 1列目のみ
 ```
 =ARRAYFORMULA(IF(ISBLANK($G$1:$G$150),"",COUNTIFS($G$1:$G$150,"<>'",ROW($G$1:$G$150),"<="&ROW($G$1:$G$150)-1)))
 ```
-#### ソート
-- 1列目のみ
-```
-=ARRAYFORMULA($D$1:$D$150 & $C$1:$C$150 & $E$1:$E$150 & IF(ISBLANK($G$1:$G$150),"", TEXT($F$1:$F$150,"00")))
-```
-
-#### 合計用関数
-- 全列に追加('2'は適宜変更)
-```
-=IF(ISBLANK(B2),"", COUNTA(K2:AO2))
-```
-
-#### トリガー
-
-<img src="./images/gas-1.png" width="400">
-<img src="./images/gas-2.png" width="400">
-
 
 ## セットアップ - Python/音源
 1. ライブラリをインストール
    ```shell
    pip install -r requirements.txt
    ```
-2. `check.py` と `periodic.py` 内の `TODO` 部分を各自変更する
+2. `check.py` と `periodic.py` 内の `TODO` 部分を変更する
 3. 音源を各自ダウンロードし、`sounds/` に入れる
 
 ### 変更点
@@ -96,23 +71,23 @@ SETTING_SHEET = '設定シート名'
 ```
 
 
-
 ## セットアップ - systemctl
-1. 以下のファイルを `/etc/systemd/system/` に用意する
+以下のファイルを `/etc/systemd/system/` に用意する  
+`()` 内は適宜変更する
 
 ### check.service
 ```shell
 [Unit]
-Description = check.py
+Description = Start the attendance system
 
 [Service]
-ExecStart=/usr/bin/python3 [パス]/check.py
+ExecStart=/usr/bin/python3 (パス)/check.py
 ```
 
 ### check.timer
 ```shell
 [Unit]
-Description=daily do something
+Description = Start the attendance system
 
 [Timer]
 OnBootSec=1min
@@ -125,20 +100,19 @@ WantedBy=timers.target
 ### periodic.service
 ```shell
 [Unit]
-Description = periodic.py
+Description = run periodically
 
 [Service]
-ExecStart=/usr/bin/python [パス]/periodic.py
+ExecStart=/usr/bin/python (パス)/periodic.py
 ```
 
 ### periodic.timer
 ```shell
 [Unit]
-Description=daily do something
+Description = run periodically
 
 [Timer]
-OnBootSec=1min
-Unit=periodic.service
+OnCalendar=*-*-* *:*:00
 
 [Install]
 WantedBy=timers.target
