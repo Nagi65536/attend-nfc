@@ -1,7 +1,7 @@
-sounds/*
+sounds/
 .DS_Store
 __pycache__
 client_secret.json
-check.db
+db/
 .venv/
 ._client_secret.json

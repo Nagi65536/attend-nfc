@@ -39,10 +39,10 @@ class MyCardReader(object):
 # 入退室記録の登録
 def record(rfid):
     dt_now = datetime.datetime.now(JST)
-    date = int(dt_now.strftime('%Y%m'))
+    date = dt_now.strftime('%m%d')
     month = int(dt_now.strftime('%m'))
     month_str = ["jan", "feb", "mar", "apr", "may",
-                 "jun", "jul", "aug", "sep", "oct", "nov", "dec"](month-1)
+                 "jun", "jul", "aug", "sep", "oct", "nov", "dec"][month-1]
 
     cur.execute(
         f'SELECT {month_str}, last_touch FROM user_data WHERE rfid="{rfid}"')
@@ -53,7 +53,7 @@ def record(rfid):
         subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_ENTRY}', '-q'])
         attend_num = res[0] + 1
         cur.execute(
-            f'UPDATE user_data SET last_touch={date}, {month_str}={attend_num} WHERE rfid="{rfid}"')
+            f'UPDATE user_data SET last_touch="{date}", {month_str}={attend_num} WHERE rfid="{rfid}"')
         print('【記録】')
 
     # 登録済み and タッチ済
@@ -74,7 +74,7 @@ def record(rfid):
                 try:
                     cur.execute(f'''INSERT INTO 
                         user_data (rfid, last_touch)
-                        VALUES ("{rfid}", {date})
+                        VALUES ("{rfid}", "{date}")
                     ''')
                     subprocess.Popen(
                         ['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
@@ -92,8 +92,7 @@ def record(rfid):
 
 if __name__ == '__main__':
     PATH = os.path.dirname(os.path.abspath(__file__))
-
-    conn = sqlite3.connect(f'{PATH}/check.db', isolation_level=None)
+    conn = sqlite3.connect(f'{PATH}/db/check.db', isolation_level=None)
     cur = conn.cursor()
 
     # テーブルがなかった場合は作る
@@ -112,7 +111,7 @@ if __name__ == '__main__':
             oct	       INTEGER DEFAULT 0,
             nov	       INTEGER DEFAULT 0,
             dec	       INTEGER DEFAULT 0,
-            last_touch INTEGER,
+            last_touch TEXT
         )''')
 
     scope = ['https://spreadsheets.google.com/feeds',
@@ -122,11 +121,11 @@ if __name__ == '__main__':
     client = gspread.authorize(creds)
     sht = client.open_by_key("16QxcHhQBNo5RL1LgPiPMn4GKsOEd6FmAX4trDBPfN0Q")
 
+    sht = client.open(SPREADSHEET_APP)
+    main_sheet = sht.worksheet(ROSTER_NAME)
+
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
-
-    target_data = client.open(SPREADSHEET_APP)
-    main_sheet = target_data.worksheet(ROSTER_NAME)
 
     cr = MyCardReader()
 
