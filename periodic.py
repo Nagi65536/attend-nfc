@@ -57,7 +57,12 @@ def db_update():
     all_data = main_sheet.get_all_values()
     cur.execute('SELECT rfid FROM user_data')
     rfid_list_db = [r[0] for r in cur.fetchall()]
+    rfid_list_gs = [data[7] for data in all_data]
     is_deleted = False
+
+    for rfid in set(rfid_list_db) - set(rfid_list_gs):
+        print(f'【削除】@DB {rfid}')
+        cur.execute(f'DELETE FROM user_data WHERE rfid="{rfid}"')
 
     for i, data in enumerate(all_data[1:]):
         rfid = data[7] if data[7] else '---'
@@ -86,7 +91,7 @@ def main():
     now_time = dt_now.strftime('%H:%M')
 
     get_data = setting_sheet.col_values(3)
-    set_times = [get_data[2], get_data[3]]
+    set_times = get_data[2:]
 
     # 帰りの音楽を流す
     if now_time in set_times:
