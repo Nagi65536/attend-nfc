@@ -22,10 +22,12 @@ ROSTER_NAME = '名簿'                 # 名簿シート名
 class MyCardReader(object):
     # カードがタッチされたら呼び出される
     def on_connect(self, tag):
-        self.rfid = binascii.hexlify(tag.identifier).upper().decode('utf-8')
-        print(f'rfid : {self.rfid}')
-        record(self.rfid)
-        return True
+        try:
+            self.rfid = binascii.hexlify(tag.identifier).upper().decode('utf-8')
+            print(f'rfid : {self.rfid}')
+            record(self.rfid)
+        finally:
+            return True
 
     # カードの検知
     def read_id(self):
@@ -64,19 +66,26 @@ def record(rfid):
     # 未登録
     else:
         all_data = main_sheet.get_all_values()
-        idm_list = [d[7] for d in all_data]
 
-        for i, value in enumerate(idm_list[1:]):
-            # 新規登録(rfid が 10文字以下)があるか
-            if len(value) > 0 and len(value) < 11:
+        for i, data in enumerate(all_data[1:]):
+            # 既に RFID が入っている
+            if data[8] == '追加' and len(data[7]) > 10:
+                print(f'【追加失敗】')
+                main_sheet.update(f'I{i+2}', [['ERROR']])
+                subprocess.Popen(
+                    ['mpg321', f'{PATH}/sounds/{SE_ERROR}', '-q'])
+                return
+
+            # 新規追加する
+            elif data[8] == '追加':
                 subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
                 try:
                     cur.execute(f'''INSERT INTO 
                         user_data (rfid, last_touch)
-                        VALUES ("{rfid}", "{date}"
+                        VALUES ("{rfid}", "0000"
                     )
                     ''')
-                    main_sheet.update_cell(i+2, 8, rfid)
+                    main_sheet.update(f'H{i+2}', [[rfid, '']])
                     print(f'【新規登録】{i+2}, {rfid}')
                     subprocess.Popen(
                         ['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
@@ -84,11 +93,30 @@ def record(rfid):
                     print(f'【登録失敗】')
                     subprocess.Popen(
                         ['mpg321', f'{PATH}/sounds/{SE_ERROR}', '-q'])
-
                 return
 
-        subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_NONE}', '-q'])
+            # RFID を変更する
+            elif data[8] == '変更':
+                subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
+                try:
+                    cur.execute(f'''UPDATE
+                        user_data SET
+                        rfid="{rfid}"
+                        WHERE rfid="{data[7]}"
+                    ''')
+                    main_sheet.update(f'H{i+2}', [[rfid, '']])
+                    print(f'【更新】{i+2}, {rfid}')
+                    subprocess.Popen(
+                        ['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
+                except:
+                    print(f'【更新失敗】')
+                    subprocess.Popen(
+                        ['mpg321', f'{PATH}/sounds/{SE_ERROR}', '-q'])
+                return
+
         print('【未登録】')
+        subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_NONE}', '-q'])
+        return
 
 
 if __name__ == '__main__':
@@ -131,6 +159,6 @@ if __name__ == '__main__':
     cr = MyCardReader()
 
     print('⚡️ Attend System is running!')
-    record('111111111111')
+    record('asdfasdfasdf2')
     # while True:
     #     cr.read_id()

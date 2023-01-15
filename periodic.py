@@ -24,6 +24,63 @@ def str_to_int(value):
         return value
 
 
+def gs_update(all_data=None):
+    if all_data == None:
+        all_data = main_sheet.get_all_values()
+
+    datum = []
+    for i, data in enumerate(all_data[1:]):
+        if data[8] == '削除':
+            continue
+
+        cur.execute(f'''
+            SELECT apr, may, jun, jul, aug, sep, oct, nov, dec, jan, feb, mar
+            FROM user_data
+            WHERE rfid="{'---' if len(data[7]) == 0 else data[7]}"
+        ''')
+        res = cur.fetchone()
+        user_data = [str_to_int(d) for d in data[1:8]]
+
+        if res:
+            datum.append([*user_data, '', *res, sum(res)])
+        else:
+            datum.append([*user_data, '', *[0 for _ in range(12)], 0])
+
+    courses = ('G', 'T', 'J')
+    datum = sorted(datum, key=lambda x: (x[2], courses.index(x[1]), x[3], x[4]))
+    main_sheet.batch_clear(['B2:V150'])
+    main_sheet.update('B2', datum)
+    print('【更新】')
+
+
+def db_update():
+    all_data = main_sheet.get_all_values()
+    cur.execute('SELECT rfid FROM user_data')
+    rfid_list_db = [r[0] for r in cur.fetchall()]
+    is_deleted = False
+
+    for i, data in enumerate(all_data[1:]):
+        rfid = data[7] if data[7] else '---'
+
+        if data[8] not in ['追加', '変更', '削除', '']:
+            main_sheet.update_cell(i+2, 8, '')
+
+        if data[8] == '削除':
+            print(f'【削除】{rfid}')
+            cur.execute(f'DELETE FROM user_data WHERE rfid="{rfid}"')
+            is_deleted = True
+
+        elif rfid not in rfid_list_db and rfid != '---':
+            print(f'【新規登録】{rfid}')
+            cur.execute(f'''INSERT INTO 
+                user_data (rfid, last_touch)
+                VALUES ("{rfid}", "0000")
+            ''')
+
+    if is_deleted:
+        gs_update(all_data)
+
+
 def main():
     dt_now = datetime.datetime.now(JST)
     now_time = dt_now.strftime('%H:%M')
@@ -35,59 +92,14 @@ def main():
     if now_time in set_times:
         print('【再生開始】蛍の光')
         subprocess.Popen(['mpg321', f'{PATH}/sounds/{MUSIC_FILE}', '-q'])
-        return
 
     # データを更新する
     elif now_time in ['00:00', '00:01']:
-        all_data = main_sheet.get_all_values()
-        main_sheet.batch_clear(['B2:V150'])
-
-        datum = []
-        for i, data in enumerate(all_data[1:]):
-            if len(data[1]) == 0:
-                pass
-
-            cur.execute(f'''
-                SELECT apr, may, jun, jul, aug, sep, oct, nov, dec, jan, feb, mar
-                FROM user_data
-                WHERE rfid="{'-' if len(data[7]) == 0 else data[7]}"
-            ''')
-            res = cur.fetchone()
-            user_data = [str_to_int(d) for d in data[1:8]]
-            if res:
-                datum.append([*user_data, '', *res, sum(res)])
-            else:
-                datum.append([*user_data, '', *[0 for _ in range(12)], 0])
-
-        main_sheet.update('B2', datum)
-        print('【更新】')
-        return
+        gs_update()
 
     # 登録情報を更新
     else:
-        cur.execute('SELECT rfid FROM user_data')
-        rfid_list_db = [r[0] for r in cur.fetchall()]
-        rfid_list_gs = main_sheet.col_values(8)[1:]
-        diff_rfid = list(set(rfid_list_db) ^ set(rfid_list_gs))
-
-        for rfid in diff_rfid[1:]:
-            if len(rfid) == 0:
-                pass
-
-            elif rfid in rfid_list_db:
-                print(f'【削除】{rfid}')
-                cur.execute(f'SELECT rfid FROM user_data rfid="{rfid}"')
-                if cur.fetchone():
-                    cur.execute(f'DELETE FROM user_data WHERE rfid="{rfid}"')
-
-            else:
-                print(f'【新規登録】{rfid}')
-                cur.execute(f'''INSERT INTO 
-                    user_data (rfid, last_touch)
-                    VALUES ("{rfid}", "0000")
-                ''')
-
-        return
+        db_update()
 
 
 if __name__ == '__main__':
