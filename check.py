@@ -70,19 +70,20 @@ def record(rfid):
             # 新規登録(rfid が 10文字以下)があるか
             if len(value) > 0 and len(value) < 11:
                 subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
-                print(f'【新規登録】{i+1}, {value}')
                 try:
                     cur.execute(f'''INSERT INTO 
                         user_data (rfid, last_touch)
-                        VALUES ("{rfid}", "{date}")
+                        VALUES ("{rfid}", "{date}"
+                    )
                     ''')
+                    main_sheet.update_cell(i+2, 8, rfid)
+                    print(f'【新規登録】{i+2}, {rfid}')
                     subprocess.Popen(
                         ['mpg321', f'{PATH}/sounds/{SE_NEW}', '-q'])
-                    print(f'【新規登録】{i+1}, {value}')
                 except:
+                    print(f'【登録失敗】')
                     subprocess.Popen(
                         ['mpg321', f'{PATH}/sounds/{SE_ERROR}', '-q'])
-                    print(f'【登録失敗】')
 
                 return
 
@@ -130,5 +131,6 @@ if __name__ == '__main__':
     cr = MyCardReader()
 
     print('⚡️ Attend System is running!')
-    while True:
-        cr.read_id()
+    record('111111111111')
+    # while True:
+    #     cr.read_id()

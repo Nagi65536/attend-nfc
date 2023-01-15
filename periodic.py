@@ -38,12 +38,15 @@ def main():
         return
 
     # データを更新する
-    elif now_time in ['15:21', '00:01']:
+    elif now_time in ['00:00', '00:01']:
         all_data = main_sheet.get_all_values()
         main_sheet.batch_clear(['B2:V150'])
 
         datum = []
         for i, data in enumerate(all_data[1:]):
+            if len(data[1]) == 0:
+                pass
+
             cur.execute(f'''
                 SELECT apr, may, jun, jul, aug, sep, oct, nov, dec, jan, feb, mar
                 FROM user_data
