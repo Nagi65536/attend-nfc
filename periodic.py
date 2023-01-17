@@ -32,7 +32,7 @@ def gs_update(all_data=None):
         cur.execute(f'''
             SELECT apr, may, jun, jul, aug, sep, oct, nov, dec, jan, feb, mar
             FROM user_data
-            WHERE rfid="{'---' if len(data[7]) == 0 else data[7]}"
+            WHERE rfid="{data[7] or '---'}"
         ''')
         res = cur.fetchone()
         user_data = [str_to_int(d) for d in data[1:8]]
@@ -92,7 +92,8 @@ def main():
         return
 
     all_data = main_sheet.get_all_values()
-    set_times = [data[22] for data in all_data[1:]]
+    set_times = [data[24] for data in all_data[1:] if data[24] != ""]
+    print(set_times)
 
     # 帰りの音楽を流す
     if now_time in set_times:
