@@ -14,7 +14,6 @@ SE_NEW = 'succeed.mp3'             # 新規登録時
 
 SPREADSHEET_APP = 'misc-list'      # スプレッドシートのファイル名
 ROSTER_NAME = '名簿'                # 名簿シート名
-SETTING_SHEET = '設定'              # 設定シート名
 
 
 def str_to_int(value):
@@ -50,8 +49,7 @@ def gs_update(all_data=None):
     print('【更新】')
 
 
-def db_update():
-    all_data = main_sheet.get_all_values()
+def db_update(all_data):
     cur.execute('SELECT rfid FROM user_data')
     rfid_list_db = [r[0] for r in cur.fetchall()]
     rfid_list_gs = [data[7] for data in all_data]
@@ -82,9 +80,19 @@ def db_update():
 def main():
     dt_now = datetime.datetime.now(JST)
     now_time = dt_now.strftime('%H:%M')
+    now_hour = int(dt_now.strftime('%H'))
 
-    get_data = setting_sheet.col_values(3)
-    set_times = get_data[2:]
+    # データを更新する
+    if now_time in ['00:00', '00:01']:
+        gs_update()
+        return
+
+    # 無駄なアクセスを減らす
+    if now_hour < 7 or now_hour > 21:
+        return
+
+    all_data = main_sheet.get_all_values()
+    set_times = [data[22] for data in all_data[1:]]
 
     # 帰りの音楽を流す
     if now_time in set_times:
@@ -92,13 +100,9 @@ def main():
         p = subprocess.Popen(['mpg321', f'{PATH}/sounds/{MUSIC_FILE}', '-q'])
         p.wait()
 
-    # データを更新する
-    elif now_time in ['00:00', '00:01']:
-        gs_update()
-
     # 登録情報を更新
     else:
-        db_update()
+        db_update(all_data)
 
 
 if __name__ == '__main__':
@@ -131,7 +135,6 @@ if __name__ == '__main__':
 
     sht = client.open(SPREADSHEET_APP)
     main_sheet = sht.worksheet(ROSTER_NAME)
-    setting_sheet = sht.worksheet(SETTING_SHEET)
 
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
