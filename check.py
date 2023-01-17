@@ -9,11 +9,12 @@ import nfc
 from oauth2client.service_account import ServiceAccountCredentials
 
 # TODO
-SE_ENTRY = 'maou_system23.mp3'      # 入室時
-SE_ALREADY = 'maou_system46.mp3'    # 退室時
+SE_ENTRY = 'maou_system46.mp3'      # 記録時
+SE_ALREADY = 'maou_system23.mp3'    # 記録済時
 SE_NEW = 'succeed.mp3'              # 新規登録時
 SE_NONE = 'maou_system35.mp3'       # 未登録時
 SE_ERROR = 'pickup02.mp3'           # システムエラー
+SE_BOOT = 'crrect_answer1.mp3'      # 起動音
 
 SPREADSHEET_APP = 'misc-list'       # スプレッドシートのファイル名
 ROSTER_NAME = '名簿'                 # 名簿シート名
@@ -68,9 +69,16 @@ def record(rfid):
         all_data = main_sheet.get_all_values()
 
         for i, data in enumerate(all_data[1:]):
-            # 既に RFID が入っている
+            # 追加なのに既に RFID が入っている
             if data[8] == '追加' and len(data[7]) > 10:
                 print(f'【追加失敗】')
+                main_sheet.update(f'I{i+2}', [['ERROR']])
+                subprocess.Popen(
+                    ['mpg321', f'{PATH}/sounds/{SE_ERROR}', '-q'])
+                return
+
+            elif data[8] == '変更' and len(data[7]) <= 10:
+                print(f'【変更失敗】')
                 main_sheet.update(f'I{i+2}', [['ERROR']])
                 subprocess.Popen(
                     ['mpg321', f'{PATH}/sounds/{SE_ERROR}', '-q'])
@@ -120,7 +128,7 @@ def record(rfid):
 
 
 if __name__ == '__main__':
-    PATH = os.path.dirname(os.path.abspath(__file__))
+    PATH = os.path.dirname(os.path.abspath(__file__)) + "/.."
     conn = sqlite3.connect(f'{PATH}/db/check.db', isolation_level=None)
     cur = conn.cursor()
 
@@ -159,6 +167,6 @@ if __name__ == '__main__':
     cr = MyCardReader()
 
     print('⚡️ Attend System is running!')
-    record('asdfasdfasdf2')
-    # while True:
-    #     cr.read_id()
+    subprocess.Popen(['mpg321', f'{PATH}/sounds/{SE_BOOT}', '-q'])
+    while True:
+        cr.read_id()
