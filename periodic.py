@@ -107,7 +107,7 @@ def main():
 
 
 if __name__ == '__main__':
-    PATH = os.path.dirname(os.path.abspath(__file__)) + "/.."
+    PATH = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(f'{PATH}/db/check.db', isolation_level=None)
     cur = conn.cursor()
     cur.execute('''
